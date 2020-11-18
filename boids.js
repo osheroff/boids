@@ -2,7 +2,7 @@
 let width = 150;
 let height = 150;
 
-const numBoids = 100;
+const numBoids = 1000;
 const visualRange = 75;
 
 var boids = [];
