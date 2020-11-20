@@ -2,14 +2,16 @@
 let width = 150;
 let height = 150;
 
-const numBoids = 2000;
+const numBoids = 3000;
 const visualRange = 75;
+const maxNeighbors = 5;
 
 var boids = [];
 
 function initBoids() {
   for (var i = 0; i < numBoids; i += 1) {
     boids[boids.length] = {
+      id: boids.length,
       x: Math.random() * width,
       y: Math.random() * height,
       dx: Math.random() * 10 - 5,
@@ -75,10 +77,11 @@ function flyTowardsCenter(boid) {
   let centerY = 0;
   let numNeighbors = 0;
 
-  for (let otherBoid of boids) {
-    if (distance(boid, otherBoid) < visualRange) {
-      centerX += otherBoid.x;
-      centerY += otherBoid.y;
+  let i = 0;
+  for (let i = 0; i < boids.length && numNeighbors < maxNeighbors; i++) {
+    if (distance(boid, boids[i]) < visualRange) {
+      centerX += boids[i].x;
+      centerY += boids[i].y;
       numNeighbors += 1;
     }
   }
@@ -98,11 +101,14 @@ function avoidOthers(boid) {
   const avoidFactor = 0.05; // Adjust velocity by this %
   let moveX = 0;
   let moveY = 0;
-  for (let otherBoid of boids) {
-    if (otherBoid !== boid) {
-      if (distance(boid, otherBoid) < minDistance) {
-        moveX += boid.x - otherBoid.x;
-        moveY += boid.y - otherBoid.y;
+  let numNeighbors = 0;
+
+  for (let i = 0; i < boids.length && numNeighbors < maxNeighbors; i++) {
+    if (boids[i].id !== boid.id) {
+      if (distance(boid, boids[i]) < minDistance) {
+        moveX += boid.x - boids[i].x;
+        moveY += boid.y - boids[i].y;
+        numNeighbors++;
       }
     }
   }
@@ -120,10 +126,10 @@ function matchVelocity(boid) {
   let avgDY = 0;
   let numNeighbors = 0;
 
-  for (let otherBoid of boids) {
-    if (distance(boid, otherBoid) < visualRange) {
-      avgDX += otherBoid.dx;
-      avgDY += otherBoid.dy;
+  for(let i = 0; i < boids.length && numNeighbors < maxNeighbors; i++) {
+    if (distance(boid, boids[i]) < visualRange) {
+      avgDX += boids[i].dx;
+      avgDY += boids[i].dy;
       numNeighbors += 1;
     }
   }
