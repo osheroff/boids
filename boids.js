@@ -6,12 +6,30 @@ const numBoids = 1500;
 const visualRange = 50;
 const maxNeighbors = 500;
 
+const STATE_REVEALING = 0;
+const STATE_FLYOFF = 1;
+const STATE_COVER = 2;
+
+let state = STATE_REVEALING;
+
+let nTicks = 0;
+let nRevealed = 0;
+
 var boids = [];
 
 let gradientCanvas = () => { return document.getElementById("gradient") }
 let gradientData = null;
+let gradientOpacity = 1.0;
+
+let photos = [
+  "url('./photo.jpg')",
+  "url('./blackie.jpg')"
+]
+
+let photoIndex = 0
 
 function initBoids() {
+  boids = []
   for (var i = 0; i < numBoids; i += 1) {
     let x;
     let y;
@@ -76,8 +94,11 @@ function sizeCanvas() {
 // Constrain a boid to within the window. If it gets too close to an edge,
 // nudge it back in and reverse its direction.
 function keepWithinBounds(boid) {
-  const margin = 50;
+  const margin = -100;
   const turnFactor = 1;
+
+  if ( state != STATE_REVEALING )
+    return
 
   if (boid.x < margin) {
     boid.dx += turnFactor;
@@ -180,6 +201,33 @@ function limitSpeed(boid) {
   }
 }
 
+function attemptToReveal(boid) {
+  const revealFactor = 0.02
+  let xOffset = 0, yOffset = 0
+  let x = Math.round(boid.x + boid.dx);
+  let y = Math.round(boid.y + boid.dy);
+
+  let offset = (y * 4 * width)  + (x * 4) + 3;
+
+  while ( gradientData.data[offset] == 0 ) {
+    xOffset = Math.abs(xOffset) + Math.random()
+    yOffset = Math.abs(yOffset) + Math.random()
+
+    if ( xOffset > 4 || yOffset > 4 ) return
+
+    if ( Math.random() > 0.5 )
+      xOffset *= -1
+    if ( Math.random() > 0.5 )
+      yOffset *= -1
+
+    offset = (Math.round(y + yOffset) * 4 * width)  + (Math.round(x + xOffset) * 4) + 3;
+  }
+
+  boid.dx += (xOffset * revealFactor)
+  boid.dy += (yOffset * revealFactor)
+}
+
+
 const DRAW_TRAIL = false;
 
 function drawBoid(ctx, boid) {
@@ -274,11 +322,16 @@ function drawBoid(ctx, boid) {
 
   let boidX = Math.round(boid.x)
   let boidY = Math.round(boid.y)
-  let s = 3
-  for ( let x = Math.max(boidX - s, 0); x < Math.min(boidX + s, width); x++ ) {
-    for ( let y = Math.max(boidY - s, 0); y < Math.min(boidY + s, height); y++ ) {
-      let centerOffset = 1.0 - (Math.abs(x - boidX) * Math.abs(y - boidY) / (s * s))
-      revealAt(x, y, centerOffset * 60)
+  let s = Math.round(1 + ( 10 * ( nTicks / 900 ) ))
+
+  if ( state < STATE_COVER ) {
+    let revealFactor = Math.min(200, Math.sqrt(nTicks) * 2)
+
+    for ( let x = Math.max(boidX - s, 0); x < Math.min(boidX + s, width); x++ ) {
+      for ( let y = Math.max(boidY - s, 0); y < Math.min(boidY + s, height); y++ ) {
+        let centerOffset = (1.0 - (Math.abs(x - boidX) * Math.abs(y - boidY) / (s * s))) + 0.1
+        revealAt(x, y, centerOffset * revealFactor)
+      }
     }
   }
 
@@ -295,9 +348,17 @@ function drawBoid(ctx, boid) {
 }
 
 function revealAt(x, y, delta) {
+  let flyOffThreshold = 0.7;
   let offset = (y * 4 * width)  + (x * 4) + 3
-  gradientData.data[offset] -= delta
 
+  if ( gradientData.data[offset] > 0 && gradientData.data[offset] - delta <= 0 ) {
+    nRevealed++
+    if ( nRevealed / (width * height) > flyOffThreshold && state == STATE_REVEALING ) {
+      state = STATE_FLYOFF
+    }
+  }
+
+  gradientData.data[offset] -= delta
 }
 
 
@@ -316,12 +377,26 @@ function drawGradient() {
   gradientData = ctx.getImageData(0, 0, gc.width, gc.height)
 }
 
+function mostBoidsOffscreen() {
+  let nOff = 0
+  for(let boid of boids) {
+    if ( boid.x < 0 || boid.y < 0 || boid.x > width || boid.y > height )
+      nOff += 1
+  }
+  return nOff / boids.length > 0.9
+}
+
 // Main animation loop
 function animationLoop() {
+  nTicks++;
+  //console.log("nTicks: " + nTicks)
+  //console.log("nRevealed: " + nRevealed)
+
   // Update each boid
   for (let boid of boids) {
     // Update the velocities according to each rule
     flyTowardsCenter(boid);
+    //attemptToReveal(boid);
     avoidOthers(boid);
     matchVelocity(boid);
     limitSpeed(boid);
@@ -339,11 +414,35 @@ function animationLoop() {
 
   ctx.clearRect(0, 0, width, height);
   let gc = gradientCanvas().getContext("2d")
+
+
   gc.clearRect(0, 0, width, height)
   gc.putImageData(gradientData, 0, 0)
 
   for (let boid of boids) {
     drawBoid(ctx, boid);
+  }
+
+  if ( state == STATE_FLYOFF ) {
+    gradientOpacity -= 0.01
+
+    if ( mostBoidsOffscreen() && gradientOpacity <= 0.0 ) {
+      state = STATE_COVER
+      drawGradient()
+    }
+
+    gradientCanvas().style.opacity = gradientOpacity
+  } else if ( state == STATE_COVER ) {
+    gradientOpacity += 0.02
+    gradientCanvas().style.opacity = gradientOpacity
+    if ( gradientOpacity >= 1 ) {
+      let body = document.getElementsByTagName("body")[0]
+      body.style.backgroundImage = photos[photoIndex++]
+      //initBoids();
+      nTicks = 0;
+      nRevealed = 0;
+      state = STATE_REVEALING;
+    }
   }
 
   // Schedule the next frame
@@ -359,6 +458,9 @@ window.onload = () => {
 
   // Randomly distribute the boids to start
   initBoids();
+
+  let body = document.getElementsByTagName("body")[0]
+  body.style.backgroundImage = photos[photoIndex++]
 
   // Schedule the main animation loop
   window.requestAnimationFrame(animationLoop);
