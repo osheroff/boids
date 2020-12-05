@@ -22,8 +22,11 @@ let gradientData = null;
 let gradientOpacity = 1.0;
 
 let photos = [
-  "url('./photo.jpg')",
-  "url('./blackie.jpg')"
+  "url('./images/1.jpg')",
+  "url('./images/2.jpg')",
+  "url('./images/3.jpg')",
+  "url('./images/4.jpg')",
+  "url('./images/5.jpg')"
 ]
 
 let photoIndex = 0
@@ -383,7 +386,7 @@ function mostBoidsOffscreen() {
     if ( boid.x < 0 || boid.y < 0 || boid.x > width || boid.y > height )
       nOff += 1
   }
-  return nOff / boids.length > 0.9
+  return nOff / boids.length > 0.3
 }
 
 // Main animation loop
