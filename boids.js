@@ -7,13 +7,15 @@ const visualRange = 50;
 const maxNeighbors = 500;
 
 const STATE_REVEALING = 0;
-const STATE_FLYOFF = 1;
-const STATE_COVER = 2;
+const STATE_COVERING = 1;
+const STATE_FADEIN = 2;
+const STATE_BETWEEN = 3;
 
 let state = STATE_REVEALING;
 
 let nTicks = 0;
 let nRevealed = 0;
+let nCovered = 0;
 
 var boids = [];
 
@@ -99,9 +101,6 @@ function sizeCanvas() {
 function keepWithinBounds(boid) {
   const margin = -100;
   const turnFactor = 1;
-
-  if ( state != STATE_REVEALING )
-    return
 
   if (boid.x < margin) {
     boid.dx += turnFactor;
@@ -327,14 +326,16 @@ function drawBoid(ctx, boid) {
   let boidY = Math.round(boid.y)
   let s = Math.round(1 + ( 10 * ( nTicks / 900 ) ))
 
-  if ( state < STATE_COVER ) {
-    let revealFactor = Math.min(200, Math.sqrt(nTicks) * 2)
+  let revealFactor = Math.min(200, Math.sqrt(nTicks) * 2)
 
-    for ( let x = Math.max(boidX - s, 0); x < Math.min(boidX + s, width); x++ ) {
-      for ( let y = Math.max(boidY - s, 0); y < Math.min(boidY + s, height); y++ ) {
-        let centerOffset = (1.0 - (Math.abs(x - boidX) * Math.abs(y - boidY) / (s * s))) + 0.1
+  for ( let x = Math.max(boidX - s, 0); x < Math.min(boidX + s, width); x++ ) {
+    for ( let y = Math.max(boidY - s, 0); y < Math.min(boidY + s, height); y++ ) {
+      let centerOffset = (1.0 - (Math.abs(x - boidX) * Math.abs(y - boidY) / (s * s))) + 0.1
+
+      if ( state == STATE_REVEALING )
         revealAt(x, y, centerOffset * revealFactor)
-      }
+      else
+        coverAt(x, y, centerOffset * revealFactor)
     }
   }
 
@@ -351,17 +352,40 @@ function drawBoid(ctx, boid) {
 }
 
 function revealAt(x, y, delta) {
-  let flyOffThreshold = 0.7;
+  let endRevealThreshold = 0.2;
   let offset = (y * 4 * width)  + (x * 4) + 3
 
   if ( gradientData.data[offset] > 0 && gradientData.data[offset] - delta <= 0 ) {
     nRevealed++
-    if ( nRevealed / (width * height) > flyOffThreshold && state == STATE_REVEALING ) {
-      state = STATE_FLYOFF
+    if ( nRevealed / (width * height) > endRevealThreshold && state == STATE_REVEALING && photoIndex < photos.length ) {
+      console.log("covering...")
+
+      nCovered = 0
+      for ( let i = 3 ; i < gradientData.data.length ; i += 4 ) {
+        if ( gradientData.data[i] >= 255 )
+          nCovered++
+      }
+
+      state = STATE_COVERING
     }
   }
 
   gradientData.data[offset] -= delta
+}
+
+function coverAt(x, y, delta) {
+  let endCoverThreshold = 0.4;
+  let offset = (y * 4 * width)  + (x * 4) + 3
+
+  if ( gradientData.data[offset] < 255 && gradientData.data[offset] + delta >= 255 ) {
+    nCovered++
+    if ( nCovered / (width * height) > endCoverThreshold && state == STATE_COVERING ) {
+      console.log("fadein...")
+      state = STATE_FADEIN
+    }
+  }
+
+  gradientData.data[offset] += delta
 }
 
 
@@ -369,11 +393,10 @@ function drawGradient() {
   let gc = gradientCanvas()
   let ctx = gc.getContext("2d")
   let gradient = ctx.createLinearGradient(0, 0, 0, gc.height)
-  gradient.addColorStop(0.0, '#154277')
-  gradient.addColorStop(0.3, '#576e71')
-  gradient.addColorStop(0.7, '#e1c45e')
-
-  gradient.addColorStop(1.0, '#b26339')
+  gradient.addColorStop(0.0, 'rgb(21, 66, 119)')
+  gradient.addColorStop(0.3, 'rgb(75, 119, 125)')
+  gradient.addColorStop(0.7, 'rgb(225, 163, 94)')
+  gradient.addColorStop(1.0, 'rgb(178, 89, 57)')
   ctx.fillStyle = gradient
   ctx.fillRect(0, 0, gc.width, gc.height)
 
@@ -393,7 +416,6 @@ function mostBoidsOffscreen() {
 function animationLoop() {
   nTicks++;
   //console.log("nTicks: " + nTicks)
-  //console.log("nRevealed: " + nRevealed)
 
   // Update each boid
   for (let boid of boids) {
@@ -426,6 +448,7 @@ function animationLoop() {
     drawBoid(ctx, boid);
   }
 
+  /*
   if ( state == STATE_FLYOFF ) {
     gradientOpacity -= 0.01
 
@@ -435,17 +458,25 @@ function animationLoop() {
     }
 
     gradientCanvas().style.opacity = gradientOpacity
-  } else if ( state == STATE_COVER ) {
-    gradientOpacity += 0.02
-    gradientCanvas().style.opacity = gradientOpacity
-    if ( gradientOpacity >= 1 ) {
+  } else */
+  if ( state == STATE_COVERING ) {
+    console.log("nCovered: " + nCovered)
+  }
+
+  if ( state == STATE_FADEIN ) {
+    state = STATE_BETWEEN
+    let transition = document.getElementById("transition")
+    console.log("photoIndex: " + photoIndex)
+    transition.style.backgroundImage = photos[++photoIndex]
+    transition.style.opacity = 1.0
+    setTimeout(() => {
       let body = document.getElementsByTagName("body")[0]
-      body.style.backgroundImage = photos[photoIndex++]
-      //initBoids();
-      nTicks = 0;
-      nRevealed = 0;
-      state = STATE_REVEALING;
-    }
+      body.style.backgroundImage = photos[photoIndex]
+      transition.style.opacity = 0.0
+      state = STATE_REVEALING
+      nRevealed = 0
+      nTicks = 60
+    }, 4000)
   }
 
   // Schedule the next frame
@@ -463,7 +494,7 @@ window.onload = () => {
   initBoids();
 
   let body = document.getElementsByTagName("body")[0]
-  body.style.backgroundImage = photos[photoIndex++]
+  body.style.backgroundImage = photos[photoIndex]
 
   // Schedule the main animation loop
   window.requestAnimationFrame(animationLoop);
