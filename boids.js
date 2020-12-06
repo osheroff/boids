@@ -6,50 +6,104 @@ const numBoids = 1500;
 const visualRange = 50;
 const maxNeighbors = 500;
 
-const STATE_REVEALING = 0;
-const STATE_COVERING = 1;
-const STATE_FADEIN = 2;
-const STATE_BETWEEN = 3;
-
-let state = STATE_REVEALING;
-
-let nTicks = 0;
 let nRevealed = 0;
 let nCovered = 0;
-
 var boids = [];
+
+const N_PHOTOS = 5
 
 let gradientCanvas = () => { return document.getElementById("gradient") }
 let gradientData = null;
 let gradientOpacity = 1.0;
 
-let photos = [
-  "url('./images/1.jpg')",
-  "url('./images/2.jpg')",
-  "url('./images/3.jpg')",
-  "url('./images/4.jpg')",
-  "url('./images/5.jpg')"
-]
+let layers;
 
-let photoIndex = 0
+function initLayers() {
+  let layers = [ ]
+  let body = document.getElementsByTagName("body")[0]
+  let width = window.innerWidth;
+  let height = window.innerHeight;
+
+  for(i = 0; i < N_PHOTOS + 2; i++) {
+    let newCanvas = document.createElement("canvas")
+    newCanvas.width = width
+    newCanvas.height = height
+    newCanvas.style.position = "fixed"
+    newCanvas.style.top = 0
+    newCanvas.style.left = 0
+    newCanvas.style.zIndex = 10 - i
+    body.appendChild(newCanvas)
+
+    layers[i] = { idx: i, finished: false }
+    if ( i == 1 ) {
+      layers[i].data = drawGradient(newCanvas)
+    } else if ( i > 1 ) {
+      drawPhoto(newCanvas, layers[i], i - 1)
+    }
+
+    layers[i].canvas = newCanvas
+    layers[i].nRevealed = 0
+  }
+  return layers
+}
+
+
+function drawGradient(gc) {
+  let ctx = gc.getContext("2d")
+  let gradient = ctx.createLinearGradient(0, 0, 0, gc.height)
+  gradient.addColorStop(0.0, 'rgb(21, 66, 119)')
+  gradient.addColorStop(0.3, 'rgb(75, 119, 125)')
+  gradient.addColorStop(0.7, 'rgb(225, 163, 94)')
+  gradient.addColorStop(1.0, 'rgb(178, 89, 57)')
+  ctx.fillStyle = gradient
+  ctx.fillRect(0, 0, gc.width, gc.height)
+
+  return ctx.getImageData(0, 0, gc.width, gc.height)
+}
+
+function drawPhoto(canvas, layer, i) {
+  let img = document.createElement("img")
+  img.src = "./images/" + i + ".jpg"
+  img.crossOrigin = "Anonymous"
+
+  img.onload = () => {
+    let ctx = canvas.getContext("2d")
+    let canvasRatio = canvas.width / canvas.height
+    let imgRatio = img.width / img.height
+    let drawWidth, drawHeight
+
+    if ( imgRatio > canvasRatio ) {
+      drawHeight = canvas.height
+      drawWidth = drawHeight * imgRatio
+    } else {
+      drawWidth = canvas.width
+      drawHeight = drawWidth / imgRatio
+    }
+
+    ctx.drawImage(img, 0, 0, drawWidth, drawHeight);
+    layer.data = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  }
+}
 
 function initBoids() {
   boids = []
+  let width = window.innerWidth
+  let height = window.innerHeight
   for (var i = 0; i < numBoids; i += 1) {
     let x;
     let y;
 
     if ( i < numBoids / 4 ) {
       x = Math.random() * width
-      y = -Math.random() * height
+      y = -((Math.random() * height) + 10)
     } else if ( i < (numBoids / 4) * 2 ) {
-      x = width + (Math.random() * width)
+      x = width + (Math.random() * width) + 10
       y = Math.random() * height
     } else if ( i < (numBoids / 4) * 3 ) {
       x = Math.random() * width
-      y = height + (Math.random() * height)
+      y = height + (Math.random() * height) + 10
     } else {
-      x = -Math.random() * width
+      x = -(Math.random() * width + 10)
       y = Math.random() * height
     }
     boids[boids.length] = {
@@ -59,6 +113,8 @@ function initBoids() {
       dx: Math.random() * 10 - 5,
       dy: Math.random() * 10 - 5,
       flapState: Math.random() * 20,
+      layer: 1,
+      nTicks: [],
       history: [],
     };
   }
@@ -203,32 +259,6 @@ function limitSpeed(boid) {
   }
 }
 
-function attemptToReveal(boid) {
-  const revealFactor = 0.02
-  let xOffset = 0, yOffset = 0
-  let x = Math.round(boid.x + boid.dx);
-  let y = Math.round(boid.y + boid.dy);
-
-  let offset = (y * 4 * width)  + (x * 4) + 3;
-
-  while ( gradientData.data[offset] == 0 ) {
-    xOffset = Math.abs(xOffset) + Math.random()
-    yOffset = Math.abs(yOffset) + Math.random()
-
-    if ( xOffset > 4 || yOffset > 4 ) return
-
-    if ( Math.random() > 0.5 )
-      xOffset *= -1
-    if ( Math.random() > 0.5 )
-      yOffset *= -1
-
-    offset = (Math.round(y + yOffset) * 4 * width)  + (Math.round(x + xOffset) * 4) + 3;
-  }
-
-  boid.dx += (xOffset * revealFactor)
-  boid.dy += (yOffset * revealFactor)
-}
-
 
 const DRAW_TRAIL = false;
 
@@ -240,8 +270,10 @@ function drawBoid(ctx, boid) {
   ctx.strokeStyle = "#558cf4";
 
   ctx.save();
-  ctx.strokeStyle="#000000";
   ctx.beginPath();
+
+  ctx.fillStyle = "#000000";
+  ctx.strokeStyle="#000000";
 
   ctx.translate(boid.x, boid.y);
   ctx.transform(0.20, 0, 0, 0.20, 0, 0);
@@ -305,7 +337,7 @@ function drawBoid(ctx, boid) {
     ctx.bezierCurveTo(57.3405475,10.3261897,59.3356647,9.12036212,60.6171875,8.57894785);
     ctx.bezierCurveTo(61.8987103,8.03753358,63.7123107,7.63426451,66.0579887,7.36914062);
     ctx.closePath();
-    ctx.fill("evenodd");
+    ctx.fill();
     ctx.stroke();
   }
 
@@ -314,8 +346,8 @@ function drawBoid(ctx, boid) {
   if ( boid.flapState >= 60 ) boid.flapState = 0
 
   ctx.closePath();
-  ctx.fillStyle = "#000";
-  ctx.fill("evenodd");
+
+  ctx.fill();
   ctx.stroke();
   ctx.restore();
 
@@ -324,19 +356,27 @@ function drawBoid(ctx, boid) {
 
   let boidX = Math.round(boid.x)
   let boidY = Math.round(boid.y)
-  let s = Math.round(1 + ( 10 * ( nTicks / 900 ) ))
 
-  let revealFactor = Math.min(200, Math.sqrt(nTicks) * 2)
+  for ( let i = 1 ; i <= boid.layer; i++ ) {
+    if ( layers[i].finished )
+      continue;
 
-  for ( let x = Math.max(boidX - s, 0); x < Math.min(boidX + s, width); x++ ) {
-    for ( let y = Math.max(boidY - s, 0); y < Math.min(boidY + s, height); y++ ) {
-      let centerOffset = (1.0 - (Math.abs(x - boidX) * Math.abs(y - boidY) / (s * s))) + 0.1
+    if ( !boid.nTicks[i] )
+      boid.nTicks[i] = 1
 
-      if ( state == STATE_REVEALING )
-        revealAt(x, y, centerOffset * revealFactor)
-      else
-        coverAt(x, y, centerOffset * revealFactor)
+    let s = Math.round(1 + ( 10 * ( boid.nTicks[i] / 900 ) ))
+
+    let revealFactor = Math.min(200, Math.sqrt(boid.nTicks[i]) * 2)
+
+    for ( let x = Math.max(boidX - s, 0); x < Math.min(boidX + s, width); x++ ) {
+      for ( let y = Math.max(boidY - s, 0); y < Math.min(boidY + s, height); y++ ) {
+        let centerOffset = (1.0 - (Math.abs(x - boidX) * Math.abs(y - boidY) / (s * s))) + 0.1
+
+        revealAt(boid, layers[i], x, y, centerOffset * revealFactor)
+      }
     }
+
+    boid.nTicks[i]++;
   }
 
   if (DRAW_TRAIL) {
@@ -351,57 +391,39 @@ function drawBoid(ctx, boid) {
   }
 }
 
-function revealAt(x, y, delta) {
-  let endRevealThreshold = 0.2;
+function revealAt(boid, layer, x, y, delta) {
+  let endRevealThreshold = 0.5;
   let offset = (y * 4 * width)  + (x * 4) + 3
 
-  if ( gradientData.data[offset] > 0 && gradientData.data[offset] - delta <= 0 ) {
-    nRevealed++
-    if ( nRevealed / (width * height) > endRevealThreshold && state == STATE_REVEALING && photoIndex < photos.length ) {
-      console.log("covering...")
+  if ( layer.data.data[offset] > 0 && layer.data.data[offset] - delta <= 0 ) {
+    layer.nRevealed++
 
-      nCovered = 0
-      for ( let i = 3 ; i < gradientData.data.length ; i += 4 ) {
-        if ( gradientData.data[i] >= 255 )
-          nCovered++
-      }
+    if ( layer.idx == boid.layer && layer.nRevealed / (width * height) > endRevealThreshold && boid.layer < layers.length - 1 )
+      boid.layer++
 
-      state = STATE_COVERING
-    }
+    if ( layer.nRevealed / (width * height) > 0.98 )
+      layer.finished = true
   }
 
-  gradientData.data[offset] -= delta
+  layer.data.data[offset] -= delta
 }
 
-function coverAt(x, y, delta) {
+/*
+function coverAt(boid, x, y, delta) {
   let endCoverThreshold = 0.4;
   let offset = (y * 4 * width)  + (x * 4) + 3
 
   if ( gradientData.data[offset] < 255 && gradientData.data[offset] + delta >= 255 ) {
     nCovered++
-    if ( nCovered / (width * height) > endCoverThreshold && state == STATE_COVERING ) {
-      console.log("fadein...")
-      state = STATE_FADEIN
-    }
+
+    if ( nCovered % (50 * nTicks)  == 0 )
+      boid.cover = false
   }
 
   gradientData.data[offset] += delta
 }
 
-
-function drawGradient() {
-  let gc = gradientCanvas()
-  let ctx = gc.getContext("2d")
-  let gradient = ctx.createLinearGradient(0, 0, 0, gc.height)
-  gradient.addColorStop(0.0, 'rgb(21, 66, 119)')
-  gradient.addColorStop(0.3, 'rgb(75, 119, 125)')
-  gradient.addColorStop(0.7, 'rgb(225, 163, 94)')
-  gradient.addColorStop(1.0, 'rgb(178, 89, 57)')
-  ctx.fillStyle = gradient
-  ctx.fillRect(0, 0, gc.width, gc.height)
-
-  gradientData = ctx.getImageData(0, 0, gc.width, gc.height)
-}
+*/
 
 function mostBoidsOffscreen() {
   let nOff = 0
@@ -412,71 +434,60 @@ function mostBoidsOffscreen() {
   return nOff / boids.length > 0.3
 }
 
+
+const FPS = 60;
+let prevTick = 0;
+
+let blankTime = 0;
+
 // Main animation loop
 function animationLoop() {
-  nTicks++;
+  // clamp to fixed framerate
+  let now = Math.round(FPS * Date.now() / 1000)
+
+  if (now == prevTick) {
+    window.requestAnimationFrame(animationLoop)
+    return
+  }
+  prevTick = now
+
   //console.log("nTicks: " + nTicks)
 
-  // Update each boid
-  for (let boid of boids) {
-    // Update the velocities according to each rule
-    flyTowardsCenter(boid);
-    //attemptToReveal(boid);
-    avoidOthers(boid);
-    matchVelocity(boid);
-    limitSpeed(boid);
-    keepWithinBounds(boid);
+  if ( blankTime++ > 20 ) {
+    // Update each boid
+    for (let boid of boids) {
+      // Update the velocities according to each rule
+      flyTowardsCenter(boid);
+      avoidOthers(boid);
+      matchVelocity(boid);
+      limitSpeed(boid);
+      keepWithinBounds(boid);
 
-    // Update the position based on the current velocity
-    boid.x += boid.dx;
-    boid.y += boid.dy;
-    boid.history.push([boid.x, boid.y])
-    boid.history = boid.history.slice(-50);
+      // Update the position based on the current velocity
+      boid.x += boid.dx;
+      boid.y += boid.dy;
+      boid.history.push([boid.x, boid.y])
+      boid.history = boid.history.slice(-50);
+    }
+  }
+
+
+  for ( let i = 1 ; i < layers.length; i++ ) {
+    let ctx = layers[i].canvas.getContext("2d")
+    ctx.clearRect(0, 0, layers[i].canvas.width, layers[i].canvas.height)
+    if ( layers[i].data && !layers[i].finished )
+      ctx.putImageData(layers[i].data, 0, 0)
+
+    if ( layers[i].nRevealed == 0 )
+      break;
   }
 
   // Clear the canvas and redraw all the boids in their current positions
-  const ctx = document.getElementById("boids").getContext("2d");
-
+  const ctx = layers[0].canvas.getContext("2d");
   ctx.clearRect(0, 0, width, height);
-  let gc = gradientCanvas().getContext("2d")
-
-
-  gc.clearRect(0, 0, width, height)
-  gc.putImageData(gradientData, 0, 0)
 
   for (let boid of boids) {
     drawBoid(ctx, boid);
-  }
-
-  /*
-  if ( state == STATE_FLYOFF ) {
-    gradientOpacity -= 0.01
-
-    if ( mostBoidsOffscreen() && gradientOpacity <= 0.0 ) {
-      state = STATE_COVER
-      drawGradient()
-    }
-
-    gradientCanvas().style.opacity = gradientOpacity
-  } else */
-  if ( state == STATE_COVERING ) {
-    console.log("nCovered: " + nCovered)
-  }
-
-  if ( state == STATE_FADEIN ) {
-    state = STATE_BETWEEN
-    let transition = document.getElementById("transition")
-    console.log("photoIndex: " + photoIndex)
-    transition.style.backgroundImage = photos[++photoIndex]
-    transition.style.opacity = 1.0
-    setTimeout(() => {
-      let body = document.getElementsByTagName("body")[0]
-      body.style.backgroundImage = photos[photoIndex]
-      transition.style.opacity = 0.0
-      state = STATE_REVEALING
-      nRevealed = 0
-      nTicks = 60
-    }, 4000)
   }
 
   // Schedule the next frame
@@ -484,18 +495,13 @@ function animationLoop() {
 }
 
 window.onload = () => {
-  // Make sure the canvas always fills the whole window
-  window.addEventListener("resize", sizeCanvas, false);
-  sizeCanvas();
-
-  drawGradient();
+  layers = initLayers()
 
   // Randomly distribute the boids to start
   initBoids();
 
-  let body = document.getElementsByTagName("body")[0]
-  body.style.backgroundImage = photos[photoIndex]
-
+  width = window.innerWidth
+  height = window.innerHeight
   // Schedule the main animation loop
   window.requestAnimationFrame(animationLoop);
 };
