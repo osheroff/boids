@@ -112,7 +112,6 @@ function initBoids() {
       y: y,
       dx: Math.random() * 10 - 5,
       dy: Math.random() * 10 - 5,
-      flapState: Math.random() * 20,
       layer: 1,
       nTicks: [],
       history: [],
@@ -126,31 +125,6 @@ function distance(boid1, boid2) {
     (boid1.x - boid2.x) * (boid1.x - boid2.x) +
       (boid1.y - boid2.y) * (boid1.y - boid2.y),
   );
-}
-
-// TODO: This is naive and inefficient.
-function nClosestBoids(boid, n) {
-  // Make a copy
-  const sorted = boids.slice();
-  // Sort the copy by distance from `boid`
-  sorted.sort((a, b) => distance(boid, a) - distance(boid, b));
-  // Return the `n` closest
-  return sorted.slice(1, n + 1);
-}
-
-// Called initially and whenever the window resizes to update the canvas
-// size and width/height variables.
-function sizeCanvas() {
-  const canvas = document.getElementById("boids");
-  width = window.innerWidth;
-  height = window.innerHeight;
-  canvas.width = width;
-  canvas.height = height;
-
-  const gc = gradientCanvas()
-  gc.width = width
-  gc.height = height
-  drawGradient()
 }
 
 // Constrain a boid to within the window. If it gets too close to an edge,
@@ -388,16 +362,6 @@ function revealAt(boid, layer, x, y, delta) {
   layer.data.data[offset] -= delta
 }
 
-function mostBoidsOffscreen() {
-  let nOff = 0
-  for(let boid of boids) {
-    if ( boid.x < 0 || boid.y < 0 || boid.x > width || boid.y > height )
-      nOff += 1
-  }
-  return nOff / boids.length > 0.3
-}
-
-
 const FPS = 60;
 let prevTick = 0;
 
@@ -413,8 +377,6 @@ function animationLoop() {
     return
   }
   prevTick = now
-
-  //console.log("nTicks: " + nTicks)
 
   if ( blankTime++ > 20 ) {
     // Update each boid
