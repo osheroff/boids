@@ -2,15 +2,68 @@
 let width = 150;
 let height = 150;
 
-const numBoids = 1000;
+const numBoids = 1500;
 const visualRange = 50;
-const maxNeighbors = 500;
+const maxNeighbors = 50;
 
 let nRevealed = 0;
 let nCovered = 0;
 var boids = [];
 
-const N_PHOTOS = 5
+
+let photos = [
+  {
+    src: "images/2017-04-25 22.22.37.jpg",
+    desc: "in between sign",
+  },
+  {
+    src: "images/2.jpg",
+    desc: "louise / family"
+  },
+  {
+    src: "images/3.jpg",
+    desc: "ferni's mausoleum photo",
+    revealThreshold: 0.2
+  },
+  {
+    src: "images/2017-05-03 16.08.22.jpg",
+    desc: "pachinko parlour",
+    revealThreshold: 0.9
+  },
+  {
+    src: "images/2018-03-23 15.40.39.jpg",
+    desc: "light slashes on floor",
+    revealThreshold: 0.3
+  },
+  {
+    src: "images/2017-06-26 15.58.02.jpg",
+    desc: "teufulsburg"
+  },
+  {
+    src: "images/2019-07-23 22.12.44.jpg",
+    desc: "blackie"
+  },
+  {
+    src: "images/2017-07-13 16.51.56.jpg",
+    desc: "lou / candles"
+  },
+  {
+    src: "images/2017-07-05 20.19.36.jpg",
+    desc: "lou / armenia / outside"
+  },
+  "images/2017-08-15 16.30.21.jpg",
+  "images/2017-12-20 12.38.35.jpg",
+  "images/2018-08-05 11.57.32.jpg",
+  "images/2018-10-19 20.09.17.jpg",
+  "images/2019-02-23 11.18.46.jpg",
+  "images/2019-04-26 20.40.54.jpg",
+  "images/2019-07-08 12.45.54.jpg",
+  "images/2019-07-08 12.56.35.jpg",
+  "images/2019-12-22 13.01.08.jpg",
+  "images/2020-02-01 13.50.27.jpg",
+  "images/5.jpg",
+  "images/6.JPG"
+]
 
 let gradientCanvas = () => { return document.getElementById("gradient") }
 let gradientData = null;
@@ -24,7 +77,7 @@ function initLayers() {
   let width = window.innerWidth;
   let height = window.innerHeight;
 
-  for(i = 0; i < N_PHOTOS + 2; i++) {
+  for(i = 0; i < photos.length + 2; i++) {
     let newCanvas = document.createElement("canvas")
     newCanvas.width = width
     newCanvas.height = height
@@ -36,9 +89,11 @@ function initLayers() {
 
     layers[i] = { idx: i, finished: false }
     if ( i == 1 ) {
+      layers[i].revealThreshold = 0.1
       layers[i].data = drawGradient(newCanvas)
     } else if ( i > 1 ) {
-      drawPhoto(newCanvas, layers[i], i - 1)
+      drawPhoto(newCanvas, layers[i], i - 2)
+      layers[i].revealThreshold = photos[i - 2].revealThreshold
     }
 
     layers[i].canvas = newCanvas
@@ -63,7 +118,7 @@ function drawGradient(gc) {
 
 function drawPhoto(canvas, layer, i) {
   let img = document.createElement("img")
-  img.src = "./images/" + i + ".jpg"
+  img.src = photos[i].src
   img.crossOrigin = "Anonymous"
 
   img.onload = () => {
@@ -439,7 +494,7 @@ function drawBoid(ctx, boid) {
 }
 
 function revealAt(boid, layer, x, y, delta) {
-  let endRevealThreshold = 0.5;
+  let endRevealThreshold = layer.revealThreshold || 0.5;
   let offset = (y * 4 * width)  + (x * 4) + 3
 
   if ( layer.data.data[offset] > 0 && layer.data.data[offset] - delta <= 0 ) {
