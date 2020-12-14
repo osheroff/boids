@@ -2,19 +2,16 @@
 let width = 150;
 let height = 150;
 
-const numBoids = 1500;
+const numBoids = 500;
 const visualRange = 50;
 const maxNeighbors = 50;
 
-let nRevealed = 0;
-let nCovered = 0;
 var boids = [];
-
 
 let photos = [
   {
-    src: "images/2017-04-25 22.22.37.jpg",
-    desc: "in between sign",
+    src: "images/2017-07-13 16.51.56.jpg",
+    desc: "lou / candles"
   },
   {
     src: "images/2.jpg",
@@ -23,7 +20,7 @@ let photos = [
   {
     src: "images/3.jpg",
     desc: "ferni's mausoleum photo",
-    revealThreshold: 0.2
+    revealThreshold: 0.4
   },
   {
     src: "images/2017-05-03 16.08.22.jpg",
@@ -40,30 +37,37 @@ let photos = [
     desc: "teufulsburg"
   },
   {
+    src: "images/2019-07-08 12.45.54.jpg",
+    desc: "la sagrada"
+  },
+  {
     src: "images/2019-07-23 22.12.44.jpg",
     desc: "blackie"
   },
   {
-    src: "images/2017-07-13 16.51.56.jpg",
-    desc: "lou / candles"
+    src: "images/2017-04-25 22.22.37.jpg",
+    desc: "in between sign",
   },
-  {
-    src: "images/2017-07-05 20.19.36.jpg",
-    desc: "lou / armenia / outside"
-  },
+]
+/*
+ *
+ *
   "images/2017-08-15 16.30.21.jpg",
   "images/2017-12-20 12.38.35.jpg",
   "images/2018-08-05 11.57.32.jpg",
   "images/2018-10-19 20.09.17.jpg",
   "images/2019-02-23 11.18.46.jpg",
   "images/2019-04-26 20.40.54.jpg",
-  "images/2019-07-08 12.45.54.jpg",
   "images/2019-07-08 12.56.35.jpg",
   "images/2019-12-22 13.01.08.jpg",
   "images/2020-02-01 13.50.27.jpg",
   "images/5.jpg",
-  "images/6.JPG"
-]
+  "images/6.JPG",
+  {
+    src: "images/2017-07-05 20.19.36.jpg",
+    desc: "lou / armenia / outside"
+  },
+*/
 
 let gradientCanvas = () => { return document.getElementById("gradient") }
 let gradientData = null;
@@ -99,6 +103,8 @@ function initLayers() {
     layers[i].canvas = newCanvas
     layers[i].nRevealed = 0
   }
+
+
   return layers
 }
 
@@ -494,13 +500,13 @@ function drawBoid(ctx, boid) {
 }
 
 function revealAt(boid, layer, x, y, delta) {
-  let endRevealThreshold = layer.revealThreshold || 0.5;
+  let endRevealThreshold = layer.revealThreshold || 0.4;
   let offset = (y * 4 * width)  + (x * 4) + 3
 
   if ( layer.data.data[offset] > 0 && layer.data.data[offset] - delta <= 0 ) {
     layer.nRevealed++
 
-    if ( layer.idx == boid.layer && layer.nRevealed / (width * height) > endRevealThreshold && boid.layer < layers.length - 1 )
+    if ( layer.idx == boid.layer && layer.nRevealed / (width * height) > endRevealThreshold && boid.layer < layers.length - 2 )
       boid.layer++
 
     if ( layer.nRevealed / (width * height) > 0.98 )
@@ -510,10 +516,12 @@ function revealAt(boid, layer, x, y, delta) {
   layer.data.data[offset] -= delta
 }
 
-const FPS = 60;
-let prevTick = 0;
+const FPS = 2000;
+window.fps = 0;
 
+let prevTick = 0;
 let blankTime = 0;
+let lastAnimateTime = 0;
 
 // Main animation loop
 function animationLoop() {
@@ -524,7 +532,13 @@ function animationLoop() {
     window.requestAnimationFrame(animationLoop)
     return
   }
+
+  let timeBetween = Date.now() - lastAnimateTime
+
+  lastAnimateTime = Date.now()
   prevTick = now
+
+  window.fps = 1000 / (timeBetween)
 
   if ( blankTime++ > 20 ) {
     // Update each boid
@@ -569,13 +583,26 @@ function animationLoop() {
 }
 
 window.onload = () => {
-  layers = initLayers()
+  let button = document.getElementsByTagName("button")[0]
+  let body = document.getElementsByTagName("body")[0]
 
-  // Randomly distribute the boids to start
-  initBoids();
+  button.addEventListener("mousedown", (ev) => {
+    ev.target.style.display = "none"
 
-  width = window.innerWidth
-  height = window.innerHeight
-  // Schedule the main animation loop
-  window.requestAnimationFrame(animationLoop);
+    //body.requestFullscreen().then((ev) => {
+      setTimeout(() => {
+        layers = initLayers()
+
+        // Randomly distribute the boids to start
+        initBoids();
+
+        width = window.innerWidth
+        height = window.innerHeight
+        console.log(width)
+        console.log(height)
+        // Schedule the main animation loop
+        window.requestAnimationFrame(animationLoop)
+      }, 2000)
+    // })
+  })
 };
