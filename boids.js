@@ -7,25 +7,29 @@ const visualRange = 50;
 const maxNeighbors = 50;
 
 var boids = [];
+let activeLayer = 1;
 
 let photos = [
   {
-    src: "images/2017-07-13 16.51.56.jpg",
-    desc: "lou / candles"
+    src: "images/76.jpg",
+    desc: "beaver / desert / sunset"
   },
   {
-    src: "images/2.jpg",
-    desc: "louise / family"
+    src: "images/53.jpg",
+    desc: "woman smoking cigarette"
   },
   {
-    src: "images/3.jpg",
-    desc: "ferni's mausoleum photo",
-    revealThreshold: 0.4
+    src: "images/IMG_7528.JPG",
+    desc: "paris crowd"
   },
   {
     src: "images/2017-05-03 16.08.22.jpg",
-    desc: "pachinko parlour",
-    revealThreshold: 0.9
+    desc: "pachinko parlour"
+  },
+  {
+    src: "images/2018-08-05 11.57.32.jpg",
+    desc: "flower/snail",
+    revealThreshold: 0.8
   },
   {
     src: "images/2018-03-23 15.40.39.jpg",
@@ -35,10 +39,6 @@ let photos = [
   {
     src: "images/2017-06-26 15.58.02.jpg",
     desc: "teufulsburg"
-  },
-  {
-    src: "images/2019-07-08 12.45.54.jpg",
-    desc: "la sagrada"
   },
   {
     src: "images/2019-07-23 22.12.44.jpg",
@@ -336,7 +336,7 @@ function drawBoid(ctx, boid) {
 
   ctx.translate(boid.x, boid.y);
 
-    ctx.strokeStyle="#FFFFFF";
+    ctx.strokeStyle="#000000";
 
   let mod = boid.nTicks++ % 90
 
@@ -466,14 +466,14 @@ function drawBoid(ctx, boid) {
   let boidX = Math.round(boid.x)
   let boidY = Math.round(boid.y)
 
-  for ( let i = 1 ; i <= boid.layer; i++ ) {
+  for ( let i = 1 ; i <= activeLayer; i++ ) {
     if ( layers[i].finished )
       continue;
 
     if ( !boid.layerTicks[i] )
       boid.layerTicks[i] = 1
 
-    let s = Math.round(1 + ( 10 * ( boid.layerTicks[i] / 900 ) ))
+    let s = Math.round(1 + ( 12 * ( boid.layerTicks[i] / 900 ) ))
 
     let revealFactor = Math.min(200, Math.sqrt(boid.layerTicks[i]) * 2)
 
@@ -506,8 +506,10 @@ function revealAt(boid, layer, x, y, delta) {
   if ( layer.data.data[offset] > 0 && layer.data.data[offset] - delta <= 0 ) {
     layer.nRevealed++
 
+    /*
     if ( layer.idx == boid.layer && layer.nRevealed / (width * height) > endRevealThreshold && boid.layer < layers.length - 2 )
       boid.layer++
+    */
 
     if ( layer.nRevealed / (width * height) > 0.98 )
       layer.finished = true
@@ -598,11 +600,11 @@ window.onload = () => {
 
         width = window.innerWidth
         height = window.innerHeight
-        console.log(width)
-        console.log(height)
         // Schedule the main animation loop
         window.requestAnimationFrame(animationLoop)
       }, 2000)
     // })
   })
+
+  body.addEventListener("keyup", () => { activeLayer++ })
 };
