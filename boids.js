@@ -2,7 +2,7 @@
 let width = 150;
 let height = 150;
 
-const numBoids = 500;
+const numBoids = 1500;
 const visualRange = 50;
 const maxNeighbors = 50;
 
@@ -287,7 +287,7 @@ function matchVelocity(boid) {
 // Speed will naturally vary in flocking behavior, but real animals can't go
 // arbitrarily fast.
 function limitSpeed(boid) {
-  const speedLimit = 10;
+  const speedLimit = 8;
   const grandmaLimit = 4;
 
   const speed = Math.sqrt(boid.dx * boid.dx + boid.dy * boid.dy);
