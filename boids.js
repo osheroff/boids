@@ -7,10 +7,24 @@ let movementData
 var boids = [];
 let activeLayer = 1;
 
+//changeFrames = [400, 600, 722, 1200, 1700, 1800, 2095, 2670, 2957, 3378]
+changeFrames = []
+changeFrames = [110, 179, 388, 612]
 let photos = [
   {
-    src: "images/76.jpg",
-    desc: "beaver / desert / sunset"
+    src: "house/home0.jpeg",
+  },
+  {
+    src: "house/home1.jpeg",
+  },
+  {
+    src: "house/home2.jpeg",
+  },
+  {
+    src: "house/home3.jpeg",
+  },
+  {
+    src: "house/home0.jpeg",
   },
   {
     src: "images/53.jpg",
@@ -21,12 +35,16 @@ let photos = [
     desc: "paris crowd"
   },
   {
-    src: "images/DSC_0491.JPG",
-    desc: "graffiti on a wall"
+    src: "hands/hands1.jpg",
+    desc: "couple hands"
   },
   {
-    src: "images/79.jpg",
-    desc: "on a bridge"
+    src: "hands/hands2.jpg",
+    desc: "baby hands"
+  },
+  {
+    src: "images/53.jpg",
+    desc: "woman smoking cigarette"
   },
   {
     src: "images/2017-05-03 16.08.22.jpg",
@@ -85,7 +103,7 @@ function initLayers() {
   let width = window.innerWidth;
   let height = window.innerHeight;
 
-  for(i = 0; i < photos.length + 2; i++) {
+  for(i = 0; i < photos.length + 1; i++) {
     let newCanvas = document.createElement("canvas")
     newCanvas.width = width
     newCanvas.height = height
@@ -96,12 +114,12 @@ function initLayers() {
     body.appendChild(newCanvas)
 
     layers[i] = { idx: i, finished: false }
-    if ( i == 1 ) {
+    if ( false && i == 1 ) {
       layers[i].revealThreshold = 0.1
       layers[i].data = drawGradient(newCanvas)
-    } else if ( i > 1 ) {
-      drawPhoto(newCanvas, layers[i], i - 2)
-      layers[i].revealThreshold = photos[i - 2].revealThreshold
+    } else if ( i > 0 ) {
+      drawPhoto(newCanvas, layers[i], i - 1)
+      layers[i].revealThreshold = photos[i - 1].revealThreshold
     }
 
     layers[i].canvas = newCanvas
@@ -387,9 +405,8 @@ function revealAt(boid, layer, x, y, delta) {
   layer.data.data[offset] -= delta
 }
 
-changeFrames = [199, 506, 722, 1048, 1350, 1745, 2095, 2670, 2957, 3378]
 
-const FPS = 5;
+const FPS = 30;
 window.fps = 0;
 
 let prevTick = 0;

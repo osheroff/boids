@@ -1,8 +1,8 @@
 const numBoids = 3000;
 const visualRange = 50;
 
-let width = 1920
-let height = 1080
+let width = 1440
+let height = 763
 
 var boids = [];
 
