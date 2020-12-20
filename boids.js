@@ -21,12 +21,20 @@ let photos = [
     desc: "paris crowd"
   },
   {
+    src: "images/DSC_0491.JPG",
+    desc: "graffiti on a wall"
+  },
+  {
     src: "images/79.jpg",
     desc: "on a bridge"
   },
   {
     src: "images/2017-05-03 16.08.22.jpg",
     desc: "pachinko parlour"
+  },
+  {
+    src: "images/24.jpg",
+    desc: "baskets.  asia."
   },
   {
     src: "images/2018-03-23 15.40.39.jpg",
@@ -379,7 +387,9 @@ function revealAt(boid, layer, x, y, delta) {
   layer.data.data[offset] -= delta
 }
 
-const FPS = 20;
+changeFrames = [199, 506, 722, 1048, 1350, 1745, 2095, 2670, 2957, 3378]
+
+const FPS = 5;
 window.fps = 0;
 
 let prevTick = 0;
@@ -432,6 +442,9 @@ function animationLoop() {
     boid.nTicks++
   }
 
+  if ( changeFrames.includes(boids[0].nTicks) )
+    activeLayer++;
+
   // Schedule the next frame
   window.requestAnimationFrame(animationLoop);
 }
@@ -460,7 +473,10 @@ window.onload = () => {
   })
 
   body.addEventListener("keyup", (ev) => {
-    if ( ev.keyCode == 32 )
+    if ( ev.keyCode == 32 ) {
+      changeFrames.push(boids[0].nTicks)
+      console.log(changeFrames)
       activeLayer++
+    }
   })
 };
