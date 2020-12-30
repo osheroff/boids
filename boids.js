@@ -3,13 +3,15 @@ let width = 150;
 let height = 150;
 const numBoids = 3000;
 let movementData
+let nTicks = 0
+let waterline = 0
 
 var boids = [];
 let activeLayer = 1;
 
 //changeFrames = [400, 600, 722, 1200, 1700, 1800, 2095, 2670, 2957, 3378]
 changeFrames = []
-changeFrames = [110, 179, 388, 612]
+changeFrames = [120, 199, 388, 560, 800, 900, 1000, 1200, 1400]
 let photos = [
   {
     src: "house/home0.jpeg",
@@ -27,20 +29,24 @@ let photos = [
     src: "house/home0.jpeg",
   },
   {
-    src: "images/53.jpg",
+    src: "hands/53.jpg",
     desc: "woman smoking cigarette"
   },
   {
-    src: "images/IMG_7528.JPG",
-    desc: "paris crowd"
+    src: "hands/2013-03-31 11.48.28.jpg",
+    desc: "mom & sis"
   },
   {
-    src: "hands/hands1.jpg",
-    desc: "couple hands"
+    src: "hands/3.jpg",
+    desc: "couple on bike"
   },
   {
-    src: "hands/hands2.jpg",
+    src: "hands/Old_Ladies.jpg",
     desc: "baby hands"
+  },
+  {
+    src: "images/2019-07-08 12.45.54.jpg",
+    desc: "sagrada"
   },
   {
     src: "images/53.jpg",
@@ -91,13 +97,9 @@ let photos = [
   },
 */
 
-let gradientCanvas = () => { return document.getElementById("gradient") }
-let gradientData = null;
-let gradientOpacity = 1.0;
-
 let layers;
 
-function initLayers() {
+async function initLayers() {
   let layers = [ ]
   let body = document.getElementsByTagName("body")[0]
   let width = window.innerWidth;
@@ -118,7 +120,7 @@ function initLayers() {
       layers[i].revealThreshold = 0.1
       layers[i].data = drawGradient(newCanvas)
     } else if ( i > 0 ) {
-      drawPhoto(newCanvas, layers[i], i - 1)
+      await drawPhoto(newCanvas, layers[i], i - 1)
       layers[i].revealThreshold = photos[i - 1].revealThreshold
     }
 
@@ -144,28 +146,32 @@ function drawGradient(gc) {
   return ctx.getImageData(0, 0, gc.width, gc.height)
 }
 
-function drawPhoto(canvas, layer, i) {
+async function drawPhoto(canvas, layer, i) {
   let img = document.createElement("img")
   img.src = photos[i].src
   img.crossOrigin = "Anonymous"
 
-  img.onload = () => {
-    let ctx = canvas.getContext("2d")
-    let canvasRatio = canvas.width / canvas.height
-    let imgRatio = img.width / img.height
-    let drawWidth, drawHeight
+  let promise = new Promise((resolve, reject) => {
+    img.onload = () => {
+      let ctx = canvas.getContext("2d")
+      let canvasRatio = canvas.width / canvas.height
+      let imgRatio = img.width / img.height
+      let drawWidth, drawHeight
 
-    if ( imgRatio > canvasRatio ) {
-      drawHeight = canvas.height
-      drawWidth = drawHeight * imgRatio
-    } else {
-      drawWidth = canvas.width
-      drawHeight = drawWidth / imgRatio
+      if ( imgRatio > canvasRatio ) {
+        drawHeight = canvas.height
+        drawWidth = drawHeight * imgRatio
+      } else {
+        drawWidth = canvas.width
+        drawHeight = drawWidth / imgRatio
+      }
+
+      ctx.drawImage(img, 0, 0, drawWidth, drawHeight);
+      layer.data = ctx.getImageData(0, 0, canvas.width, canvas.height)
+      resolve()
     }
-
-    ctx.drawImage(img, 0, 0, drawWidth, drawHeight);
-    layer.data = ctx.getImageData(0, 0, canvas.width, canvas.height)
-  }
+  })
+  await promise
 }
 
 function initBoids() {
@@ -181,7 +187,6 @@ function initBoids() {
       lastY: movementData[boids.length][0][1],
       layer: 1,
       layerTicks: [],
-      nTicks: 0,
       flapTicks: Math.round(Math.random() * 90),
       history: [],
     };
@@ -240,6 +245,9 @@ boidCtx.fill();
 
 
 function drawBoid(ctx, boid) {
+  if ( nTicks < waterline )
+    return
+
   const angle = Math.atan2(boid.dy, boid.dx) + Math.PI / 2;
   ctx.translate(boid.x, boid.y);
   ctx.rotate(angle);
@@ -247,6 +255,7 @@ function drawBoid(ctx, boid) {
 
   ctx.save();
 
+  ctx.globalAlpha = 0.5
   if ( boid.white )
     ctx.fillStyle = "#ffffff";
   else
@@ -349,7 +358,9 @@ function drawBoid(ctx, boid) {
 
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
 
+function revealImage(boid) {
   let boidX = Math.round(boid.x)
   let boidY = Math.round(boid.y)
 
@@ -406,17 +417,22 @@ function revealAt(boid, layer, x, y, delta) {
 }
 
 
-const FPS = 30;
+function targetFPS() {
+  if ( nTicks >= waterline ) {
+    return 30
+  } else {
+    return 2000
+  }
+}
 window.fps = 0;
 
 let prevTick = 0;
-let blankTime = 0;
 let lastAnimateTime = 0;
 
 // Main animation loop
 function animationLoop() {
   // clamp to fixed framerate
-  let now = Math.round(FPS * Date.now() / 1000)
+  let now = Math.round(targetFPS() * Date.now() / 1000)
 
   if (now == prevTick) {
     window.requestAnimationFrame(animationLoop)
@@ -430,11 +446,7 @@ function animationLoop() {
 
   window.fps = 1000 / (timeBetween)
 
-  if ( blankTime++ > 20 ) {
-    // Update each boid
-  }
-
-  for ( let i = 1 ; i < layers.length; i++ ) {
+  for ( let i = 1 ; i <= activeLayer + 1; i++ ) {
     let ctx = layers[i].canvas.getContext("2d")
     ctx.clearRect(0, 0, layers[i].canvas.width, layers[i].canvas.height)
     if ( layers[i].data && !layers[i].finished )
@@ -449,17 +461,18 @@ function animationLoop() {
   ctx.clearRect(0, 0, width, height);
 
   for (let boid of boids) {
-    boid.x = movementData[boid.id][boid.nTicks][0]
-    boid.y = movementData[boid.id][boid.nTicks][1]
+    boid.x = movementData[boid.id][nTicks][0]
+    boid.y = movementData[boid.id][nTicks][1]
     boid.dx = boid.x - boid.lastX
     boid.dy = boid.y - boid.lastY
-    drawBoid(ctx, boid);
+    drawBoid(ctx, boid)
+    revealImage(boid)
     boid.lastX = boid.x
     boid.lastY = boid.y
-    boid.nTicks++
   }
+  nTicks++
 
-  if ( changeFrames.includes(boids[0].nTicks) )
+  if ( changeFrames.includes(nTicks) )
     activeLayer++;
 
   // Schedule the next frame
@@ -470,28 +483,31 @@ window.onload = () => {
   let button = document.getElementsByTagName("button")[0]
   let body = document.getElementsByTagName("body")[0]
 
+  fetch("/data.json")
+    .then(response => response.json())
+    .then(async (data) => {
+
+      movementData = data
+      layers = await initLayers()
+
+      // Randomly distribute the boids to start
+      initBoids();
+
+      width = window.innerWidth
+      height = window.innerHeight
+
+      button.style.display = "block"
+      // Schedule the main animation loop
+    })
+
   button.addEventListener("mousedown", (ev) => {
     ev.target.style.display = "none"
-
-    fetch("/data.json")
-      .then(response => response.json())
-      .then(data => {
-        movementData = data
-        layers = initLayers()
-
-        // Randomly distribute the boids to start
-        initBoids();
-
-        width = window.innerWidth
-        height = window.innerHeight
-        // Schedule the main animation loop
-        window.requestAnimationFrame(animationLoop)
-    })
+    window.requestAnimationFrame(animationLoop)
   })
 
   body.addEventListener("keyup", (ev) => {
     if ( ev.keyCode == 32 ) {
-      changeFrames.push(boids[0].nTicks)
+      changeFrames.push(nTicks)
       console.log(changeFrames)
       activeLayer++
     }

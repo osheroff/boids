@@ -1,8 +1,8 @@
 const numBoids = 3000;
 const visualRange = 50;
 
-let width = 1440
-let height = 763
+let width = 1920
+let height = 1080
 
 var boids = [];
 
@@ -48,7 +48,7 @@ function distance(boid1, boid2) {
 // Constrain a boid to within the window. If it gets too close to an edge,
 // nudge it back in and reverse its direction.
 function keepWithinBounds(boid) {
-  const margin = -100;
+  const margin = -30;
   const turnFactor = 1;
 
   if (boid.x < margin) {
