@@ -1,6 +1,6 @@
 // Size of canvas. These get updated to fill the whole browser.
-let width = 150;
-let height = 150;
+let width = 1920;
+let height = 1080;
 const numBoids = 3000;
 let movementData
 let nTicks = 0
@@ -11,7 +11,7 @@ let activeLayer = 1;
 
 //changeFrames = [400, 600, 722, 1200, 1700, 1800, 2095, 2670, 2957, 3378]
 changeFrames = []
-changeFrames = [120, 199, 388, 560, 800, 900, 1000, 1200, 1400]
+changeFrames = [120, 199, 388, 560, 800, 900, 1000, 1200, 1400, 1800]
 let photos = [
   {
     src: "house/home0.jpeg",
@@ -50,7 +50,12 @@ let photos = [
   },
   {
     src: "images/53.jpg",
-    desc: "woman smoking cigarette"
+    desc: "woman smoking cigarette",
+    rainbow: true
+  },
+  {
+    src: "images/white.png",
+    desc: "white background for composite",
   },
   {
     src: "images/2017-05-03 16.08.22.jpg",
@@ -102,8 +107,6 @@ let layers;
 async function initLayers() {
   let layers = [ ]
   let body = document.getElementsByTagName("body")[0]
-  let width = window.innerWidth;
-  let height = window.innerHeight;
 
   for(i = 0; i < photos.length + 1; i++) {
     let newCanvas = document.createElement("canvas")
@@ -122,6 +125,7 @@ async function initLayers() {
     } else if ( i > 0 ) {
       await drawPhoto(newCanvas, layers[i], i - 1)
       layers[i].revealThreshold = photos[i - 1].revealThreshold
+      layers[i].rainbow = photos[i - 1].rainbow
     }
 
     layers[i].canvas = newCanvas
@@ -176,8 +180,6 @@ async function drawPhoto(canvas, layer, i) {
 
 function initBoids() {
   boids = []
-  let width = window.innerWidth
-  let height = window.innerHeight
   for (var i = 0; i < numBoids; i += 1) {
     boids[boids.length] = {
       id: boids.length,
@@ -255,15 +257,29 @@ function drawBoid(ctx, boid) {
 
   ctx.save();
 
-  ctx.globalAlpha = 0.5
-  if ( boid.white )
-    ctx.fillStyle = "#ffffff";
-  else
+  //ctx.globalAlpha = 0.5
+
+  if ( layers[activeLayer].rainbow ) {
+    if ( !boid.rainbowColor ) {
+      if ( Math.random() > 0.98 ) {
+        let blue = (Math.round(Math.random() * 255)).toString(16)
+        let green = (Math.round(Math.random() * 50)).toString(16)
+        boid.rainbowColor = "#00" + green + blue
+      }
+    }
+
+    if ( boid.rainbowColor ) {
+      /* let frameCount = 2400
+      let mod = boid.flapTicks % frameCount
+      let colorFloat = (mod / frameCount) * 16777216*/
+      ctx.fillStyle = boid.rainbowColor
+    } else {
+      ctx.fillStyle = "#000000";
+    }
+  } else
     ctx.fillStyle = "#000000";
 
   ctx.translate(boid.x, boid.y);
-
-    ctx.strokeStyle="#000000";
 
   let mod = boid.flapTicks++ % 90
 
@@ -312,11 +328,10 @@ function drawBoid(ctx, boid) {
     ctx.bezierCurveTo(87.6222854,173.640586,85.8973779,166.166812,83.4688804,155.585007);
     ctx.lineTo(83.4688804,155.585007);
     ctx.bezierCurveTo(81.0403829,166.166812,79.3154754,173.640586,78.2941578,178.006328);
-  ctx.closePath();
-  ctx.fill();
+    ctx.closePath();
+    ctx.fill();
 
-  ctx.stroke();
-
+    ctx.stroke();
   } else if ( [2,3, 14, 15].includes(mod) ) {
     ctx.transform(0.08, 0, 0, 0.08, -21 * 0.08, -95 * 0.08);
 
@@ -344,14 +359,55 @@ function drawBoid(ctx, boid) {
     ctx.bezierCurveTo(26.6222854,173.640586,24.8973779,166.166812,22.4688804,155.585007);
     ctx.lineTo(22.4688804,155.585007);
     ctx.bezierCurveTo(20.0403829,166.166812,18.3154754,173.640586,17.2941578,178.006328);
-  ctx.closePath();
-  ctx.fill();
+    ctx.closePath();
+    ctx.fill();
 
-  ctx.stroke();
+    ctx.stroke();
 
   }else {
     ctx.transform(0.08, 0, 0, 0.08, -152.5 * 0.08, -95 * 0.08);
-    ctx.drawImage(boidCanvas, 0, 0)
+    if ( false ) {
+      ctx.drawImage(boidCanvas, 0, 0)
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(148.409946,178.014515);
+      ctx.bezierCurveTo(147.388629,182.380258,146.429867,186.378148,145.53366,190.008187);
+      ctx.bezierCurveTo(144.037194,184.737785,143.111294,178.615364,142.75596,171.640924);
+      ctx.bezierCurveTo(142.400626,164.666484,142.400626,149.544906,142.75596,126.27619);
+      ctx.bezierCurveTo(140.010142,116.841788,138.241805,109.690359,137.450949,104.8219);
+      ctx.bezierCurveTo(136.660093,99.9534417,136.11381,92.856223,135.8121,83.530244);
+      ctx.bezierCurveTo(135.630096,81.0089531,134.690779,79.4795561,132.994149,78.9420528);
+      ctx.bezierCurveTo(131.297519,78.4045496,127.409292,78.4045496,121.329467,78.9420528);
+      ctx.bezierCurveTo(100.433394,83.0377033,82.3062532,87.699939,66.9480445,92.92876);
+      ctx.bezierCurveTo(51.5898357,98.157581,29.6457504,107.137904,1.11578858,119.86973);
+      ctx.bezierCurveTo(6.81050932,106.713706,11.7027331,97.7333829,15.7924599,92.92876);
+      ctx.bezierCurveTo(34.3275021,71.153739,54.5346827,59.2797509,66.9480445,51.1510222);
+      ctx.bezierCurveTo(81.0014521,41.9483308,103.258935,30.1998425,126.62083,27.2540529);
+      ctx.bezierCurveTo(129.356458,26.9091072,132.966498,28.2681295,137.450949,31.3311199);
+      ctx.bezierCurveTo(138.248092,26.0639358,139.486886,21.2678766,141.167329,16.9429421);
+      ctx.bezierCurveTo(142.847772,12.6180077,146.986886,6.97308915,153.584669,0.00818656067);
+      ctx.lineTo(154.030708,0.481020853);
+      ctx.bezierCurveTo(160.369324,7.22899454,164.359757,12.7163016,166.002009,16.9429421);
+      ctx.bezierCurveTo(167.682452,21.2678766,168.921245,26.0639358,169.718389,31.3311199);
+      ctx.bezierCurveTo(174.20284,28.2681295,177.81288,26.9091072,180.548508,27.2540529);
+      ctx.bezierCurveTo(203.910402,30.1998425,226.167886,41.9483308,240.221293,51.1510222);
+      ctx.bezierCurveTo(252.634655,59.2797509,272.841836,71.153739,291.376878,92.92876);
+      ctx.bezierCurveTo(295.466605,97.7333829,300.358829,106.713706,306.053549,119.86973);
+      ctx.bezierCurveTo(277.523587,107.137904,255.579502,98.157581,240.221293,92.92876);
+      ctx.bezierCurveTo(224.863085,87.699939,206.735944,83.0377033,185.839871,78.9420528);
+      ctx.bezierCurveTo(179.760046,78.4045496,175.871819,78.4045496,174.175189,78.9420528);
+      ctx.bezierCurveTo(172.478559,79.4795561,171.539242,81.0089531,171.357238,83.530244);
+      ctx.bezierCurveTo(171.055528,92.856223,170.509245,99.9534417,169.718389,104.8219);
+      ctx.bezierCurveTo(168.927533,109.690359,167.159196,116.841788,164.413378,126.27619);
+      ctx.bezierCurveTo(164.768712,149.544906,164.768712,164.666484,164.413378,171.640924);
+      ctx.bezierCurveTo(164.058044,178.615364,163.132144,184.737785,161.635678,190.008187);
+      ctx.bezierCurveTo(160.739471,186.378148,159.780709,182.380258,158.759392,178.014515);
+      ctx.bezierCurveTo(157.738074,173.648772,156.013166,166.174999,153.584669,155.593194);
+      ctx.lineTo(153.584669,155.593194);
+      ctx.bezierCurveTo(151.156171,166.174999,149.431264,173.648772,148.409946,178.014515);
+      ctx.closePath();
+      ctx.fill();
+    }
   }
 
   ctx.restore();
@@ -418,6 +474,8 @@ function revealAt(boid, layer, x, y, delta) {
 
 
 function targetFPS() {
+  return 4
+
   if ( nTicks >= waterline ) {
     return 30
   } else {
@@ -492,9 +550,6 @@ window.onload = () => {
 
       // Randomly distribute the boids to start
       initBoids();
-
-      width = window.innerWidth
-      height = window.innerHeight
 
       button.style.display = "block"
       // Schedule the main animation loop
